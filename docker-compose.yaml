@@ -1,0 +1,96 @@
+version: '3'
+services:
+  ironman:
+    container_name: ironman
+    hostname: ironman
+    image: quay.io/coreos/etcd:v3.5.0
+    environment:
+      ETCDCTL_API: '3'
+    volumes:
+      - ./data/ironman/:/data
+    command: |
+      /usr/local/bin/etcd
+      --name ironman
+      --advertise-client-urls http://ironman:2379
+      --listen-client-urls http://0.0.0.0:2379
+      --initial-advertise-peer-urls http://ironman:2380
+      --listen-peer-urls http://0.0.0.0:2380
+      --initial-cluster-token etcd-cluster-1
+      --initial-cluster ironman=http://ironman:2380,thor=http://thor:2380,cap=http://cap:2380
+      --data-dir /data
+      --initial-cluster-state new
+    expose:
+      - "2379"
+      - "2380"
+    networks:
+      - etcd-marvel
+  thor:
+    container_name: thor
+    hostname: thor
+    image: quay.io/coreos/etcd:v3.5.0
+    environment:
+      ETCDCTL_API: '3'
+    volumes:
+      - ./data/thor/:/data
+    command: |
+      /usr/local/bin/etcd
+      --name thor
+      --advertise-client-urls http://thor:2379
+      --listen-client-urls http://0.0.0.0:2379
+      --initial-advertise-peer-urls http://thor:2380
+      --listen-peer-urls http://0.0.0.0:2380
+      --initial-cluster-token etcd-cluster-1
+      --initial-cluster ironman=http://ironman:2380,thor=http://thor:2380,cap=http://cap:2380
+      --data-dir /data
+      --initial-cluster-state new
+    expose:
+      - "2379"
+      - "2380"
+    networks:
+      - etcd-marvel
+  cap:
+    container_name: cap
+    hostname: cap
+    environment:
+      ETCDCTL_API: '3'
+    image: quay.io/coreos/etcd:v3.5.0
+    volumes:
+      - ./data/cap/:/data
+    command: |
+      /usr/local/bin/etcd
+      --name cap
+      --advertise-client-urls http://cap:2379
+      --listen-client-urls http://0.0.0.0:2379
+      --initial-advertise-peer-urls http://cap:2380
+      --listen-peer-urls http://0.0.0.0:2380
+      --initial-cluster-token etcd-cluster-1
+      --initial-cluster ironman=http://ironman:2380,thor=http://thor:2380,cap=http://cap:2380
+      --data-dir /data
+      --initial-cluster-state new
+    expose:
+      - "2379"
+      - "2380"
+    networks:
+      - etcd-marvel
+  client:
+    container_name: client
+    hostname: client
+    image: quay.io/coreos/etcd:v3.5.0
+    command: /bin/sh
+    tty: true
+    stdin_open: true
+    environment:
+      ETCDCTL_ENDPOINTS: "http://ironman:2379,http://thor:2379,http://cap:2379"
+      ETCDCTL_API: '3'
+    volumes:
+      - ./data/:/data
+    networks:
+      - etcd-marvel
+networks:
+  etcd-marvel:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1
